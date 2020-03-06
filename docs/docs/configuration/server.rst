@@ -110,6 +110,10 @@ gravatar-url
     Url for gravatar images. The "{}" is where the email hash will be placed.
     Defaults to "https://www.gravatar.com/avatar/{}?d=identicon"
 
+latest-enabled
+    If True it will enable the ``/latest`` endpoint. Optional, defaults 
+    to False.
+
 
 
 .. _CORS: https://developer.mozilla.org/en/docs/HTTP/Access_control_CORS
@@ -124,12 +128,20 @@ Enable moderation queue and handling of comments still in moderation queue
 
     [moderation]
     enabled = false
+    approve-if-email-previously-approved = false
     purge-after = 30d
 
 enabled
     enable comment moderation queue. This option only affects new comments.
     Comments in moderation queue are not visible to other users until you
     activate them.
+
+approve-if-email-previously-approved
+    automatically approve comments by an email address if that address has
+    had a comment approved within the last 6 months. No ownership verification
+    is done on the entered email address. This means that if someone is able
+    to guess correctly the email address used by a previously approved author,
+    they will be able to have their new comment auto-approved.
 
 purge-after
     remove unprocessed comments in moderation queue after given time.
@@ -286,12 +298,20 @@ supported, but new languages are relatively easy to add.
 
     [markup]
     options = strikethrough, superscript, autolink
+    flags = skip-html, escape, hard-wrap
     allowed-elements =
     allowed-attributes =
 
 options
-    `Misaka-specific Markdown extensions <http://misaka.61924.nl/#api>`_, all
-    flags starting with `EXT_` can be used there, separated by comma.
+    `Misaka-specific Markdown extensions <https://misaka.61924.nl/#api>`_, all
+    extension flags can be used there, separated by comma, either by their name
+    or as `EXT_`_.
+
+flags
+    `Misaka-specific HTML rendering flags
+    <https://misaka.61924.nl/#html-render-flags>`_, all html rendering flags
+    can be used here, separated by comma, either by their name or as `HTML_`_.
+    Per Misaka's defaults, no flags are set.
 
 allowed-elements
     Additional HTML tags to allow in the generated output, comma-separated. By
