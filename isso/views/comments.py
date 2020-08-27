@@ -2,6 +2,7 @@
 
 from __future__ import unicode_literals
 
+from configparser import NoOptionError
 import collections
 import re
 import time
@@ -19,8 +20,6 @@ from werkzeug.routing import Rule
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
-from isso.compat import text_type as str
-
 from isso import utils, local
 from isso.utils import (http, parse,
                         JSONResponse as JSON, XMLResponse as XML,
@@ -33,18 +32,9 @@ try:
     from cgi import escape
 except ImportError:
     from html import escape
-try:
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import urlparse
-try:
-    from urllib import unquote
-except ImportError:
-    from urllib.parse import unquote
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import BytesIO as StringIO
+from urllib.parse import urlparse
+from urllib.parse import unquote
+from io import BytesIO as StringIO
 
 
 # from Django appearently, looks good to me *duck*
@@ -139,7 +129,14 @@ class API(object):
         self.conf = isso.conf.section("general")
         self.moderated = isso.conf.getboolean("moderation", "enabled")
         # this is similar to the wordpress setting "Comment author must have a previously approved comment"
-        self.approve_if_email_previously_approved = isso.conf.getboolean("moderation", "approve-if-email-previously-approved")
+        try:
+            self.approve_if_email_previously_approved = isso.conf.getboolean("moderation", "approve-if-email-previously-approved")
+        except NoOptionError:
+            self.approve_if_email_previously_approved = False
+        try:
+            self.trusted_proxies = list(isso.conf.getiter("server", "trusted-proxies"))
+        except NoOptionError:
+            self.trusted_proxies = []
 
         self.guard = isso.db.guard
         self.threads = isso.db.threads
@@ -275,7 +272,7 @@ class API(object):
             data["website"] = normalize(data["website"])
 
         data['mode'] = 2 if self.moderated else 1
-        data['remote_addr'] = utils.anonymize(str(request.remote_addr))
+        data['remote_addr'] = self._remote_addr(request)
 
         with self.isso.lock:
             if uri not in self.threads:
@@ -335,6 +332,21 @@ class API(object):
         resp.headers.add("Set-Cookie", cookie(str(rv["id"])))
         resp.headers.add("X-Set-Cookie", cookie("isso-%i" % rv["id"]))
         return resp
+
+    def _remote_addr(self, request):
+        """Return the anonymized IP address of the requester.
+
+        Takes into consideration a potential X-Forwarded-For HTTP header
+        if a necessary server.trusted-proxies configuration entry is set.
+
+        Recipe source: https://stackoverflow.com/a/22936947/636849
+        """
+        remote_addr = request.remote_addr
+        if self.trusted_proxies:
+            route = request.access_route + [remote_addr]
+            remote_addr = next((addr for addr in reversed(route)
+                                if addr not in self.trusted_proxies), remote_addr)
+        return utils.anonymize(str(remote_addr))
 
     """
     @api {get} /id/:id view
@@ -890,8 +902,7 @@ class API(object):
     @xhr
     def like(self, environ, request, id):
 
-        nv = self.comments.vote(
-            True, id, utils.anonymize(str(request.remote_addr)))
+        nv = self.comments.vote(True, id, self._remote_addr(request))
         return JSON(nv, 200)
 
     """
@@ -917,8 +928,7 @@ class API(object):
     @xhr
     def dislike(self, environ, request, id):
 
-        nv = self.comments.vote(
-            False, id, utils.anonymize(str(request.remote_addr)))
+        nv = self.comments.vote(False, id, self._remote_addr(request))
         return JSON(nv, 200)
 
     # TODO: remove someday (replaced by :func:`counts`)
@@ -1120,8 +1130,8 @@ class API(object):
             return render_template('login.html', isso_host_script=isso_host_script)
         page_size = 100
         page = int(req.args.get('page', 0))
-        order_by = req.args.get('order_by', None)
-        asc = int(req.args.get('asc', 1))
+        order_by = req.args.get('order_by', 'created')
+        asc = int(req.args.get('asc', 0))
         mode = int(req.args.get('mode', 2))
         comments = self.comments.fetchall(mode=mode, page=page,
                                           limit=page_size,
