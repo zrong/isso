@@ -1148,12 +1148,11 @@ class API(object):
 
         # 2020-08-29 zrong add absurl
         url = self.conf.get('comment-postid-url')
-        # print('comment-postid-url', url)
 
         for comment in list(comments):
             comment['hash'] = self.isso.sign(comment['id'])
             if url is not None:
-                comment['absurl'] = url.format(comment['id'])
+                comment['absurl'] = url.format(comment['uri'])
             comments_enriched.append(comment)
         comment_mode_count = self.comments.count_modes()
         max_page = int(sum(comment_mode_count.values()) / 100)
