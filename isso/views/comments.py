@@ -632,11 +632,12 @@ class API(object):
             raise Forbidden
 
         item = self.comments.get(id)
-        thread = self.threads.get(item['tid'])
-        link = local("origin") + thread["uri"] + "#isso-%i" % item["id"]
 
         if item is None:
             raise NotFound
+
+        thread = self.threads.get(item['tid'])
+        link = local("origin") + thread["uri"] + "#isso-%i" % item["id"]
 
         if request.method == "GET":
             modal = (
