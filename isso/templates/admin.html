@@ -78,7 +78,11 @@
       {% if order_by == "tid" %}
         {% if thread_id != comment.tid %}
           {% set thread_id = comment.tid %}
-          <h2 class="thread-title">{{comment.title}} (<a href="{{comment.uri}}">{{comment.uri}}</a>)</h2>
+          {% if comment.absurl is defined %}
+            <h2 class="thread-title">{{comment.title}} (<a href="{{comment.absurl}}">{{comment.absurl}}</a>)</h2>
+          {% else %}
+            <h2 class="thread-title">{{comment.title}} (<a href="{{comment.uri}}">{{comment.uri}}</a>)</h2>
+          {% endif %}
         {% endif %}
       {% endif %}
 <div class='isso-comment' id='isso-{{comment.id}}'>

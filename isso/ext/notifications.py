@@ -108,8 +108,15 @@ class SMTP(object):
 
             rv.write("IP address: %s\n" % comment["remote_addr"])
 
-        rv.write("Link to comment: %s\n" %
-                 (local("origin") + thread["uri"] + "#isso-%i" % comment["id"]))
+        # 2020-08-29 zrong add a comment-url format
+        comment_url = self.isso.conf.get("general", 'comment-slug-url')
+        if comment_url is None:
+            rv.write("Link to comment: %s\n" %
+                    (local("origin") + thread["uri"] + "#isso-%i" % comment["id"]))
+        else:
+            url = comment_url.format(thread['title']) + '#isso-%i' % comment['id']
+            rv.write("Link to comment: %s\n" % url
+)
         rv.write("\n")
         rv.write("---\n")
 
@@ -192,6 +199,8 @@ class SMTP(object):
                 self._sendmail(subject, body, to)
             except smtplib.SMTPConnectError:
                 time.sleep(60)
+            except smtplib.SMTPDataError as e:
+                logger.exception(e)
             else:
                 break
 
