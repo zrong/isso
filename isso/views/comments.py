@@ -637,7 +637,13 @@ class API(object):
             raise NotFound
 
         thread = self.threads.get(item['tid'])
-        link = local("origin") + thread["uri"] + "#isso-%i" % item["id"]
+
+        # 2020-08-29 zrong add a comment-url format
+        comment_url = self.isso.conf.get("general", 'comment-slug-url')
+        if comment_url is None:
+            link = local("origin") + thread["uri"] + "#isso-%i" % item["id"]
+        else:
+            link = comment_url.format(thread['title']) + '#isso-%i' % item['id']
 
         if request.method == "GET":
             modal = (
@@ -1142,6 +1148,8 @@ class API(object):
 
         # 2020-08-29 zrong add absurl
         url = self.conf.get('comment-postid-url')
+        # print('comment-postid-url', url)
+
         for comment in list(comments):
             comment['hash'] = self.isso.sign(comment['id'])
             if url is not None:

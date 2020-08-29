@@ -94,7 +94,11 @@
     <div class='text-wrapper'>
       <div class='isso-comment-header' role='meta'>
         {% if order_by != "tid" %}
+          {% if comment.absurl is defined %}
+          <div>Thread: {{comment.title}} (<a href="{{comment.absurl}}">{{comment.absurl}}</a>)</div><br />
+          {% else %}
           <div>Thread: {{comment.title}} (<a href="{{comment.uri}}">{{comment.uri}}</a>)</div><br />
+          {% endif %}
         {% endif %}
         {% if comment.author %}
           <span class='author' id="isso-author-{{comment.id}}">{{comment.author}}</span>
